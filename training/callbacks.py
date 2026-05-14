@@ -1,29 +1,22 @@
 """
 Training callbacks for UR3 SAC trajectory tracking.
 
-Two callbacks are provided:
-
 DebugCallback
     Periodically runs a deterministic evaluation episode and writes a
     structured snapshot to disk:
         debugs/stepXXXXXXX/
-            evaluation_details.png   — six-panel evaluation plot
+            evaluation_details.png   — evaluation plot (adds orientation panel
+                                       automatically when the environment
+                                       exposes orient_error_deg in its info)
             training_progress.png    — reward and error curves over training
             observation_analysis.png — observation distribution histograms
             evaluation.mp4           — rendered episode video
             metrics.json             — tabulated numerical metrics
+                                       (includes orient_error_deg fields when
+                                       orientation data is available)
 
-CurriculumCallback
-    Adjusts environment difficulty in four phases based on the number of
-    elapsed training steps, calling env.set_difficulty() on both the
-    training and evaluation environments.
-
-    Phase  Steps         Radius   Speed   Noise    Delay
-    -----  -----------   ------   -----   ------   -----
-    1      0 – 200 K     0.04 m   0.2     0        0
-    2      200 K – 500 K 0.08 m   0.3     0        0
-    3      500 K – 800 K 0.08 m   0.4     0.0003   0
-    4      800 K – 1 M   0.08 m   0.4     0.0005   1
+Curriculum management is handled by PhasedCurriculumCallback
+(training/phased_curriculum.py), which replaces the old CurriculumCallback.
 """
 
 import json
@@ -88,6 +81,7 @@ class DebugCallback(BaseCallback):
         obs, _ = self.eval_env.reset()
         done = False
         ee_list, tgt_list, rew_list, act_list, obs_list = [], [], [], [], []
+        orient_errors_deg = []   # populated only when env exposes orient_error_deg
         frames = []
 
         for _ in range(self.n_eval_steps):
@@ -102,6 +96,8 @@ class DebugCallback(BaseCallback):
             rew_list.append(reward)
             act_list.append(action)
             obs_list.append(obs.copy())
+            if "orient_error_deg" in info:
+                orient_errors_deg.append(info["orient_error_deg"])
 
             if self.eval_env.render_mode == "rgb_array":
                 frame = self.eval_env.render()
@@ -112,6 +108,7 @@ class DebugCallback(BaseCallback):
         tgt_pos = np.array(tgt_list)
         acts = np.array(act_list)
         obs_arr = np.array(obs_list)
+        orient_arr = np.array(orient_errors_deg) if orient_errors_deg else None
         dists_mm = np.linalg.norm(ee_pos - tgt_pos, axis=1) * 1000
         jerk = np.linalg.norm(np.diff(acts, n=2, axis=0), axis=1) if len(acts) > 2 else np.zeros(1)
         t = np.arange(len(dists_mm)) * 0.01
@@ -210,6 +207,28 @@ class DebugCallback(BaseCallback):
         plt.savefig(os.path.join(step_dir, "evaluation_details.png"), dpi=150)
         plt.close()
 
+        # ---- orientation plot (only when env exposes orientation data) ----
+        if orient_arr is not None:
+            fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+            fig.suptitle(f"Orientation tracking — step {self.num_timesteps:,}", fontsize=12)
+
+            axes[0].plot(t[:len(orient_arr)], orient_arr, color="#7289da", linewidth=0.8)
+            axes[0].axhline(5, color="red", linestyle="--", alpha=0.5, label="5° target")
+            axes[0].axhline(np.mean(orient_arr), color="orange", linestyle="--",
+                           label=f"mean {np.mean(orient_arr):.1f}°")
+            axes[0].set(xlabel="Time (s)", ylabel="Error (°)", title="Orientation error")
+            axes[0].legend(fontsize=8); axes[0].grid(alpha=0.3)
+
+            axes[1].hist(orient_arr, bins=40, color="#7289da", alpha=0.75, edgecolor="white")
+            axes[1].axvline(np.mean(orient_arr), color="red", linestyle="--",
+                           label=f"mean {np.mean(orient_arr):.1f}°")
+            axes[1].set(xlabel="Error (°)", ylabel="Count", title="Orientation error distribution")
+            axes[1].legend(fontsize=8)
+
+            plt.tight_layout()
+            plt.savefig(os.path.join(step_dir, "orientation_details.png"), dpi=150)
+            plt.close()
+
         # ---- observation distribution ----
         if obs_arr.shape[0] > 0:
             fig, axes = plt.subplots(3, 3, figsize=(14, 11))
@@ -235,20 +254,27 @@ class DebugCallback(BaseCallback):
                     print(f"  [warn] could not save video: {exc}")
 
         # ---- metrics JSON ----
+        eval_metrics = {
+            "mean_dist_mm": float(np.mean(dists_mm)),
+            "median_dist_mm": float(np.median(dists_mm)),
+            "rmse_mm": float(np.sqrt(np.mean(dists_mm ** 2))),
+            "max_dist_mm": float(np.max(dists_mm)),
+            "pct_under_5mm": float(np.mean(dists_mm < 5) * 100),
+            "pct_under_10mm": float(np.mean(dists_mm < 10) * 100),
+            "pct_under_20mm": float(np.mean(dists_mm < 20) * 100),
+            "mean_reward": float(np.mean(rew_list)),
+            "mean_jerk": float(np.mean(jerk)),
+        }
+        if orient_arr is not None:
+            eval_metrics["mean_orient_error_deg"] = float(np.mean(orient_arr))
+            eval_metrics["pct_under_5deg"] = float(np.mean(orient_arr < 5) * 100)
+            eval_metrics["pct_under_10deg"] = float(np.mean(orient_arr < 10) * 100)
+            eval_metrics["pct_under_15deg"] = float(np.mean(orient_arr < 15) * 100)
+
         metrics = {
             "step": int(self.num_timesteps),
             "timestamp": datetime.now().isoformat(),
-            "eval": {
-                "mean_dist_mm": float(np.mean(dists_mm)),
-                "median_dist_mm": float(np.median(dists_mm)),
-                "rmse_mm": float(np.sqrt(np.mean(dists_mm ** 2))),
-                "max_dist_mm": float(np.max(dists_mm)),
-                "pct_under_5mm": float(np.mean(dists_mm < 5) * 100),
-                "pct_under_10mm": float(np.mean(dists_mm < 10) * 100),
-                "pct_under_20mm": float(np.mean(dists_mm < 20) * 100),
-                "mean_reward": float(np.mean(rew_list)),
-                "mean_jerk": float(np.mean(jerk)),
-            },
+            "eval": eval_metrics,
             "training": {
                 "total_episodes": len(self._ep_rewards),
                 "last_20_mean_reward": float(np.mean(self._ep_rewards[-20:]))
@@ -262,53 +288,16 @@ class DebugCallback(BaseCallback):
             json.dump(metrics, fh, indent=2)
 
         if self.verbose:
+            orient_str = (
+                f"  |  orient: {eval_metrics['mean_orient_error_deg']:.1f}°"
+                if orient_arr is not None else ""
+            )
             print(
-                f"  RMSE {metrics['eval']['rmse_mm']:.1f} mm  |  "
-                f"<10 mm: {metrics['eval']['pct_under_10mm']:.1f}%  |  "
-                f"jerk: {metrics['eval']['mean_jerk']:.4f}"
+                f"  RMSE {eval_metrics['rmse_mm']:.1f} mm  |  "
+                f"<10 mm: {eval_metrics['pct_under_10mm']:.1f}%  |  "
+                f"jerk: {eval_metrics['mean_jerk']:.4f}{orient_str}"
             )
 
 
-# ======================================================================
-
-
-class CurriculumCallback(BaseCallback):
-    """Four-phase curriculum that progressively increases task difficulty."""
-
-    _PHASES = [
-        # (max_step, radius, speed, noise,   delay)
-        (200_000,  0.04,   0.2,   0.0,     0),
-        (500_000,  0.08,   0.3,   0.0,     0),
-        (800_000,  0.08,   0.4,   0.0003,  0),
-        (None,     0.08,   0.4,   0.0005,  1),
-    ]
-
-    def __init__(self, train_env, eval_env, verbose=1):
-        super().__init__(verbose)
-        self.train_env = train_env
-        self.eval_env = eval_env
-        self._active_phase = -1
-
-    def _on_step(self) -> bool:
-        for idx, (max_step, radius, speed, noise, delay) in enumerate(self._PHASES):
-            if max_step is None or self.num_timesteps < max_step:
-                if idx != self._active_phase:
-                    self._active_phase = idx
-                    self.train_env.set_difficulty(
-                        traj_radius=radius, traj_speed=speed,
-                        obs_noise_std=noise, action_delay=delay,
-                    )
-                    # Evaluation always runs without noise or delay so that
-                    # metrics are comparable across phases.
-                    self.eval_env.set_difficulty(
-                        traj_radius=radius, traj_speed=speed,
-                        obs_noise_std=0.0, action_delay=0,
-                    )
-                    if self.verbose:
-                        print(
-                            f"\n[curriculum] phase {idx + 1}  "
-                            f"radius={radius} m  speed={speed}  "
-                            f"noise={noise}  delay={delay}"
-                        )
-                break
-        return True
+# CurriculumCallback has been replaced by PhasedCurriculumCallback
+# (training/phased_curriculum.py), which adds per-phase early stopping.

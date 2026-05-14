@@ -1,4 +1,5 @@
-from .callbacks import CurriculumCallback, DebugCallback
+from .callbacks import DebugCallback
+from .phased_curriculum import PhasedCurriculumCallback
 from .early_stopping import EarlyStoppingCallback
 
-__all__ = ["CurriculumCallback", "DebugCallback", "EarlyStoppingCallback"]
+__all__ = ["DebugCallback", "PhasedCurriculumCallback", "EarlyStoppingCallback"]
