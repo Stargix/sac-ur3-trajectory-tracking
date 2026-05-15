@@ -74,11 +74,22 @@ PHASES = [
     },
 ]
 
+def latest_checkpoint(directory):
+    if not os.path.isdir(directory):
+        return None
+    zips = [f for f in os.listdir(directory) if f.endswith(".zip")]
+    if not zips:
+        return None
+    zips.sort(key=lambda f: os.path.getmtime(os.path.join(directory, f)))
+    return os.path.join(directory, zips[-1])
+
+
 def main():
     parser = argparse.ArgumentParser(description="UR3 Orientation Fine-tuning")
     parser.add_argument("--model", default="weights/best_model.zip", help="Base model to load")
     parser.add_argument("--steps", type=int, default=300_000, help="Total FT steps")
     parser.add_argument("--lr", type=float, default=5e-5, help="Learning rate for FT")
+    parser.add_argument("--resume", action="store_true", help="Resume from latest FT checkpoint")
     args = parser.parse_args()
 
     for d in (DIR_CHECKPOINTS, DIR_WEIGHTS, DIR_LOGS, DIR_DEBUGS):
@@ -97,13 +108,22 @@ def main():
     train_env = UR3OrientationExpEnv(**p1)
     eval_env = UR3OrientationExpEnv(**p1, render_mode="rgb_array")
 
-    # Load pre-trained model
-    if not os.path.exists(args.model):
-        print(f"Error: Model {args.model} not found.")
-        return
+    # Load model
+    if args.resume:
+        ckpt = latest_checkpoint(DIR_CHECKPOINTS)
+        if ckpt:
+            print(f"Resuming FT from {ckpt}...")
+            model = SAC.load(ckpt, env=train_env)
+        else:
+            print("No FT checkpoint found — starting from base model.")
+            args.resume = False
 
-    print(f"Loading weights from {args.model}...")
-    model = SAC.load(args.model, env=train_env)
+    if not args.resume:
+        if not os.path.exists(args.model):
+            print(f"Error: Base model {args.model} not found.")
+            return
+        print(f"Loading weights from base model {args.model}...")
+        model = SAC.load(args.model, env=train_env)
     
     # Update learning rate for fine-tuning
     model.learning_rate = args.lr
