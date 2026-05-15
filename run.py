@@ -1,5 +1,5 @@
 """
-Interactive policy rollout with live MuJoCo viewer.
+Interactive policy rollout with live MuJoCo viewer (orientation-tracking branch).
 
 Opens a native MuJoCo window and runs the trained policy in real time.
 The viewer is passive (read-only camera control); press Escape or close
@@ -23,7 +23,7 @@ import mujoco.viewer
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
-from envs.ur3_tracking_env import UR3TrackingEnv
+from envs.ur3_orientation_env import UR3OrientationEnv
 from stable_baselines3 import SAC
 
 
@@ -46,11 +46,12 @@ def run(model_path, speed, max_episodes, traj_radius, traj_speed):
     print(f"Loading model: {model_path}")
     policy = SAC.load(model_path)
 
-    env = UR3TrackingEnv(
+    env = UR3OrientationEnv(
         traj_radius=traj_radius,
         traj_speed=traj_speed,
         obs_noise_std=0.0,
         action_delay=0,
+        orient_weight=1.0,
     )
 
     control_dt = env.dt          # seconds per control step (0.01 s → 100 Hz)
@@ -73,6 +74,7 @@ def run(model_path, speed, max_episodes, traj_radius, traj_speed):
             done = False
             step = 0
             episode_dists = []
+            episode_orients = []
 
             print(f"Episode {episode + 1}" +
                   (f"/{max_episodes}" if max_episodes > 0 else "") + " started.")
@@ -84,6 +86,8 @@ def run(model_path, speed, max_episodes, traj_radius, traj_speed):
                 obs, _, terminated, truncated, info = env.step(action)
                 done = terminated or truncated
                 episode_dists.append(info["dist_mm"])
+                if "orient_error_deg" in info:
+                    episode_orients.append(info["orient_error_deg"])
 
                 viewer.sync()
                 step += 1
@@ -95,10 +99,15 @@ def run(model_path, speed, max_episodes, traj_radius, traj_speed):
                     time.sleep(remaining)
 
             if episode_dists:
+                orient_str = (
+                    f"  |  Orient: {np.mean(episode_orients):.1f}°"
+                    if episode_orients else ""
+                )
                 print(
                     f"  Steps: {step}  |  "
-                    f"Mean error: {np.mean(episode_dists):.1f} mm  |  "
-                    f"Max error: {np.max(episode_dists):.1f} mm"
+                    f"Pos error: {np.mean(episode_dists):.1f} mm  |  "
+                    f"Max pos: {np.max(episode_dists):.1f} mm"
+                    f"{orient_str}"
                 )
             episode += 1
 

@@ -102,7 +102,7 @@ PHASES = [
             "traj_speed":    0.3,
             "obs_noise_std": 0.0,
             "action_delay":  0,
-            "orient_weight": 0.2,
+            "orient_weight": 0.5,
         },
         "thresholds": {
             "eval.mean_dist_mm":        (3.0,  "below"),
@@ -118,7 +118,7 @@ PHASES = [
             "traj_speed":    0.4,
             "obs_noise_std": 0.0003,
             "action_delay":  0,
-            "orient_weight": 0.6,
+            "orient_weight": 0.8,
         },
         "thresholds": {
             "eval.mean_dist_mm":        (2.0,  "below"),

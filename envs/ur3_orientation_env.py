@@ -182,8 +182,10 @@ class UR3OrientationEnv(UR3TrackingEnv):
         ee_quat = _get_site_quat(self.data, self.ee_site_id)
         orient_error = _quat_geodesic_error(ee_quat, self._target_quat)
 
-        # cos²(error/2) = (q1·q2)², ranges [0, 1]; 5.0 is the peak reward.
-        r_orient = self.orient_weight * 5.0 * np.cos(orient_error / 2.0) ** 2
+        # Exponential reward for orientation (similar to position)
+        # Peak: 10.0, Scale: 0.2 rad (~11.5 deg)
+        # At 11.5 deg, reward is ~3.7. At 30 deg, reward is ~0.7.
+        r_orient = self.orient_weight * 10.0 * np.exp(-orient_error / 0.2)
 
         return base_reward + r_orient
 
