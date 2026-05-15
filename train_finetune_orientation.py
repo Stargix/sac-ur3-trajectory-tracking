@@ -41,36 +41,38 @@ SAVE_FREQ  = 50_000
 # ---------------------------------------------------------------------------
 PHASES = [
     {
-        "name": "FT Phase 1 — Orientation Focus (Exponential Reward)",
+        "name": "FT Phase 1 — Orientation Discovery (Wide Scale)",
         "max_steps": 150_000,
         "env_kwargs": {
             "traj_radius":   0.08,
             "traj_speed":    0.3,
             "obs_noise_std": 0.0,
             "action_delay":  0,
-            "orient_weight": 0.8,
+            "orient_weight": 1.0,
+            "orient_reward_scale": 1.0,  # Wide curve for discovery
         },
         "thresholds": {
-            "eval.mean_dist_mm":        (3.0,  "below"),
-            "eval.mean_orient_error_deg": (8.0, "below"),
+            "eval.mean_dist_mm":        (4.0,  "below"),
+            "eval.mean_orient_error_deg": (15.0, "below"),
         },
-        "patience": 4,
+        "patience": 3,
     },
     {
-        "name": "FT Phase 2 — Full Difficulty Refinement",
+        "name": "FT Phase 2 — Orientation Precision (Sharp Scale)",
         "max_steps": None,
         "env_kwargs": {
             "traj_radius":   0.08,
             "traj_speed":    0.4,
-            "obs_noise_std": 0.0005,
-            "action_delay":  1,
+            "obs_noise_std": 0.0003,
+            "action_delay":  0,
             "orient_weight": 1.0,
+            "orient_reward_scale": 0.4,  # Sharpening for precision
         },
         "thresholds": {
-            "eval.mean_dist_mm":        (2.5, "below"),
-            "eval.mean_orient_error_deg": (5.0, "below"),
+            "eval.mean_dist_mm":        (3.0, "below"),
+            "eval.mean_orient_error_deg": (8.0, "below"),
         },
-        "patience": 5,
+        "patience": 4,
     },
 ]
 
@@ -86,7 +88,14 @@ def latest_checkpoint(directory):
 
 def main():
     parser = argparse.ArgumentParser(description="UR3 Orientation Fine-tuning")
-    parser.add_argument("--model", default="weights/best_model.zip", help="Base model to load")
+    
+    # Default to the best model from the previous FT session if it exists, 
+    # otherwise fall back to the base model.
+    default_model = "weights_finetune/best_model.zip"
+    if not os.path.exists(default_model):
+        default_model = "weights/best_model.zip"
+        
+    parser.add_argument("--model", default=default_model, help="Base model to load")
     parser.add_argument("--steps", type=int, default=300_000, help="Total FT steps")
     parser.add_argument("--lr", type=float, default=5e-5, help="Learning rate for FT")
     parser.add_argument("--resume", action="store_true", help="Resume from latest FT checkpoint")
