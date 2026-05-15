@@ -80,14 +80,15 @@ SAVE_FREQ  = 50_000
 # ---------------------------------------------------------------------------
 PHASES = [
     {
-        "name": "Phase 1 — position bootstrap",
-        "max_steps": 250_000,       # hard ceiling; early stop at 4 intervals
+        "name": "Phase 1 — Position Bootstrap",
+        "max_steps": 200_000,
         "env_kwargs": {
             "traj_radius":   0.04,
             "traj_speed":    0.2,
             "obs_noise_std": 0.0,
             "action_delay":  0,
             "orient_weight": 0.0,
+            "orient_reward_scale": 1.0,
         },
         "thresholds": {
             "eval.mean_dist_mm": (5.0, "below"),
@@ -95,39 +96,74 @@ PHASES = [
         "patience": 4,
     },
     {
-        "name": "Phase 2 — full trajectory, orientation introduced",
-        "max_steps": 550_000,
+        "name": "Phase 2 — Full Trajectory (Position Only)",
+        "max_steps": 450_000,
         "env_kwargs": {
             "traj_radius":   0.08,
             "traj_speed":    0.3,
             "obs_noise_std": 0.0,
             "action_delay":  0,
-            "orient_weight": 0.5,
+            "orient_weight": 0.0,
+            "orient_reward_scale": 1.0,
         },
         "thresholds": {
-            "eval.mean_dist_mm":        (3.0,  "below"),
-            "eval.mean_orient_error_deg": (25.0, "below"),
+            "eval.mean_dist_mm": (4.0, "below"),
         },
         "patience": 3,
     },
     {
-        "name": "Phase 3 — operating speed, noise, heavier orientation",
-        "max_steps": 900_000,
+        "name": "Phase 3 — Orientation Discovery (Wide Scale)",
+        "max_steps": 750_000,
+        "env_kwargs": {
+            "traj_radius":   0.08,
+            "traj_speed":    0.3,
+            "obs_noise_std": 0.0,
+            "action_delay":  0,
+            "orient_weight": 1.0,
+            "orient_reward_scale": 1.0,  # Wide curve for discovery
+        },
+        "thresholds": {
+            "eval.mean_dist_mm":        (4.0,  "below"),
+            "eval.mean_orient_error_deg": (15.0, "below"),
+        },
+        "patience": 3,
+    },
+    {
+        "name": "Phase 4 — Orientation Refinement (Medium Scale)",
+        "max_steps": 1_000_000,
+        "env_kwargs": {
+            "traj_radius":   0.08,
+            "traj_speed":    0.3,
+            "obs_noise_std": 0.0,
+            "action_delay":  0,
+            "orient_weight": 1.0,
+            "orient_reward_scale": 0.5,  # Tightening the net
+        },
+        "thresholds": {
+            "eval.mean_dist_mm":        (3.0,  "below"),
+            "eval.mean_orient_error_deg": (8.0, "below"),
+        },
+        "patience": 4,
+    },
+    {
+        "name": "Phase 5 — Speed & Noise (High Precision)",
+        "max_steps": 1_300_000,
         "env_kwargs": {
             "traj_radius":   0.08,
             "traj_speed":    0.4,
             "obs_noise_std": 0.0003,
             "action_delay":  0,
-            "orient_weight": 0.8,
+            "orient_weight": 1.0,
+            "orient_reward_scale": 0.3,  # Sharpening further
         },
         "thresholds": {
-            "eval.mean_dist_mm":        (2.0,  "below"),
-            "eval.mean_orient_error_deg": (12.0, "below"),
+            "eval.mean_dist_mm":        (2.5,  "below"),
+            "eval.mean_orient_error_deg": (6.0, "below"),
         },
         "patience": 4,
     },
     {
-        "name": "Phase 4 — full difficulty with action delay",
+        "name": "Phase 6 — Full Difficulty with Action Delay",
         "max_steps": None,          # runs until step budget is exhausted
         "env_kwargs": {
             "traj_radius":   0.08,
@@ -135,10 +171,11 @@ PHASES = [
             "obs_noise_std": 0.0005,
             "action_delay":  1,
             "orient_weight": 1.0,
+            "orient_reward_scale": 0.2,  # Full precision
         },
         "thresholds": {
-            "eval.mean_dist_mm":        (2.0, "below"),
-            "eval.mean_orient_error_deg": (8.0, "below"),
+            "eval.mean_dist_mm":        (2.5, "below"),
+            "eval.mean_orient_error_deg": (5.0, "below"),
         },
         "patience": 5,
     },
@@ -163,8 +200,8 @@ def parse_args():
     p = argparse.ArgumentParser(
         description="UR3 position + orientation tracking — SAC training"
     )
-    p.add_argument("--steps", type=int, default=1_200_000,
-                   help="Total training timesteps (default: 1 200 000)")
+    p.add_argument("--steps", type=int, default=1_500_000,
+                   help="Total training timesteps (default: 1 500 000)")
     p.add_argument("--eval-freq", type=int, default=EVAL_FREQ)
     p.add_argument("--save-freq", type=int, default=SAVE_FREQ)
     p.add_argument("--resume", action="store_true",
@@ -200,6 +237,7 @@ def main():
         traj_radius=p1["traj_radius"],
         traj_speed=p1["traj_speed"],
         orient_weight=p1["orient_weight"],
+        orient_reward_scale=p1["orient_reward_scale"],
     )
     eval_env = UR3OrientationEnv(
         obs_noise_std=0.0,
@@ -207,6 +245,7 @@ def main():
         traj_radius=p1["traj_radius"],
         traj_speed=p1["traj_speed"],
         orient_weight=p1["orient_weight"],
+        orient_reward_scale=p1["orient_reward_scale"],
         render_mode="rgb_array",
     )
 

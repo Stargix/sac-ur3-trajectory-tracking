@@ -122,18 +122,19 @@ class UR3OrientationEnv(UR3TrackingEnv):
         traj_speed=0.3,
         episode_steps=1000,
         orient_weight=0.0,
+        orient_reward_scale=0.2,
     ):
         """
         Parameters
         ----------
         orient_weight : float
             Weight of the orientation reward term in [0, 1].
-            Set to 0 during position-only training phases and increased
-            gradually by PhasedCurriculumCallback.
+        orient_reward_scale : float
+            Scale (sharpness) of the exponential orientation reward.
+            Large values (1.0) for discovery, small values (0.2) for precision.
         """
-        # Initialise orient_weight BEFORE super().__init__ because the
-        # parent constructor calls reset() → _get_obs() → _compute_reward().
         self.orient_weight = orient_weight
+        self.orient_reward_scale = orient_reward_scale
         self._target_quat = np.array([1.0, 0.0, 0.0, 0.0])  # placeholder
 
         super().__init__(
@@ -183,9 +184,9 @@ class UR3OrientationEnv(UR3TrackingEnv):
         orient_error = _quat_geodesic_error(ee_quat, self._target_quat)
 
         # Exponential reward for orientation (similar to position)
-        # Peak: 10.0, Scale: 0.2 rad (~11.5 deg)
-        # At 11.5 deg, reward is ~3.7. At 30 deg, reward is ~0.7.
-        r_orient = self.orient_weight * 10.0 * np.exp(-orient_error / 0.2)
+        # Peak: 10.0, Scale: self.orient_reward_scale
+        # Large scale (1.0) = better discovery; small scale (0.2) = precision.
+        r_orient = self.orient_weight * 10.0 * np.exp(-orient_error / self.orient_reward_scale)
 
         return base_reward + r_orient
 
@@ -208,8 +209,10 @@ class UR3OrientationEnv(UR3TrackingEnv):
     # Curriculum support — extend base set_difficulty
     # ------------------------------------------------------------------
 
-    def set_difficulty(self, orient_weight=None, **kwargs):
-        """Set orientation reward weight in addition to base parameters."""
+    def set_difficulty(self, orient_weight=None, orient_reward_scale=None, **kwargs):
+        """Set orientation parameters in addition to base parameters."""
         if orient_weight is not None:
             self.orient_weight = float(orient_weight)
+        if orient_reward_scale is not None:
+            self.orient_reward_scale = float(orient_reward_scale)
         super().set_difficulty(**kwargs)
