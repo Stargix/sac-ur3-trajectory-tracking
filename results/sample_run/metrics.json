@@ -1,23 +1,24 @@
 {
-  "step": 1000000,
-  "timestamp": "2026-05-14T19:54:31.636078",
-  "eval_episode": {
-    "mean_dist_mm": 2.3014091584846645,
-    "median_dist_mm": 1.3764561632620955,
-    "max_dist_mm": 75.96733402808273,
-    "min_dist_mm": 0.41076025933984334,
-    "std_dist_mm": 5.728393173509261,
-    "rmse_mm": 6.1734084965328995,
-    "pct_under_5mm": 95.0,
-    "pct_under_10mm": 98.6,
-    "pct_under_20mm": 98.9,
-    "mean_reward": 10.781135122780714,
-    "total_reward": 10781.135122780714,
-    "mean_jerk": 0.022593826055526733
+  "step": 500000,
+  "timestamp": "2026-05-16T23:39:45.561899",
+  "eval": {
+    "mean_dist_mm": 103.29712825644972,
+    "median_dist_mm": 78.66885587159885,
+    "rmse_mm": 145.44668046284872,
+    "max_dist_mm": 260.9144226109885,
+    "pct_under_5mm": 28.000000000000004,
+    "pct_under_10mm": 45.1,
+    "pct_under_20mm": 47.9,
+    "mean_reward": 5.01997116883381,
+    "mean_jerk": 0.5868832468986511,
+    "mean_orient_error_deg": 61.40463069467196,
+    "pct_under_5deg": 0.7000000000000001,
+    "pct_under_10deg": 3.2,
+    "pct_under_15deg": 6.2
   },
   "training": {
-    "total_episodes": 1000,
-    "last_10_mean_reward": 8187.5400390625,
-    "last_10_mean_dist_mm": 3.0274432054885887
+    "total_episodes": 500,
+    "last_20_mean_reward": 4172.28271484375,
+    "last_20_mean_dist_mm": 89.27296913787993
   }
 }

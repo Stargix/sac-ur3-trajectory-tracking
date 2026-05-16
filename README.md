@@ -32,8 +32,11 @@ Despite the failure to improve orientation, here are the training plots and eval
 ![Orientation Details](assets/orientation_details.png)
 *Fig 2: Orientation error analysis. The agent fails to sharpen the orientation tracking.*
 
+![Evaluation Details](assets/evaluation_details.png)
+*Fig 3: Detailed trajectory tracking results showing the failure to maintain orientation.*
+
 ![Failed Evaluation](assets/evaluation.gif)
-*Fig 3: Animated evaluation showing the robot struggling with orientation under high noise.*
+*Fig 4: Animated evaluation showing the robot struggling with orientation under high noise.*
 
 ---
 
@@ -178,6 +181,9 @@ python scripts/workspace_check.py
 ```
 
 This samples 50 000 random joint configurations, plots the resulting workspace cloud against the lemniscate, and reports the maximum distance from any trajectory point to the nearest sampled configuration. Output is saved to `results/workspace_check.png`.
+
+![Workspace Check](assets/workspace_check.png)
+*Fig 5: Workspace check showing the trajectory within the arm's reach.*
 
 ---
 
