@@ -12,6 +12,32 @@ The training pipeline uses a four-phase curriculum that starts with a small, slo
 
 ---
 
+## First Successful Model (1M Steps)
+
+This branch documents the **very first successful training run** of the project, reaching 1,000,000 steps. This run served as the baseline and proof-of-concept for all subsequent experiments (such as adding orientation and noise).
+
+### Key Results
+The model achieved exceptional precision on pure position tracking:
+- **Mean tracking error**: 2.3 mm
+- **RMSE**: 6.1 mm
+- **Smoothness (Mean action jerk)**: 0.022
+- **Success Rate**: 95% of the time the error was under 5 mm!
+
+### Visualizations
+
+Here are the training plots and evaluation from this historic run:
+
+![Training Progress](assets/training_progress.png)
+*Fig 1: Reward and tracking error over 1,000 episodes (1M steps).*
+
+![Observation Analysis](assets/observation_analysis.png)
+*Fig 2: Analysis of the observations during the run.*
+
+![Evaluation](assets/evaluation.gif)
+*Fig 3: Animated evaluation showing the incredible precision of the first model.*
+
+---
+
 ## Repository Structure
 
 ```
