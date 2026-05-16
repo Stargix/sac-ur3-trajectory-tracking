@@ -22,6 +22,16 @@ Initially, we used a **cosine-based reward** for orientation. While this formula
 ### Exponential Reward (Fine-tune)
 To fix the orientation precision, we applied a **fine-tuning** phase using a sharp **exponential reward** for orientation error. This forced the agent to sharpen its orientation control.
 
+### Fine-Tuning Results (Plots)
+
+Below are the training plots from the 300k steps fine-tuning run using the exponential reward:
+
+![Fine-Tuning Progress](assets/training_progress.png)
+*Fig 1: Reward and tracking error during fine-tuning. The agent maintains position tracking while adapting to the sharp orientation reward.*
+
+![Orientation Details](assets/orientation_details.png)
+*Fig 2: Orientation error analysis during fine-tuning. Note the refinement in orientation error as training progresses.*
+
 ### A Note on the "Best Model"
 As observed across different runs, the automated **`best_model.zip`** usually occurs **before** the introduction of significant sensor noise in the curriculum. Noise naturally degrades the evaluation score, so the framework saves the model at its peak deterministic performance before robustness tests begin.
 
@@ -30,10 +40,10 @@ As observed across different runs, the automated **`best_model.zip`** usually oc
 Here are the visual demonstrations of the models on this branch:
 
 ![Best Model Evaluation](assets/best_model.gif)
-*Fig 1: Evaluation of the best model (saved before noise).*
+*Fig 3: Evaluation of the best model (saved before noise).*
 
 ![Final Model Evaluation](assets/final_model.gif)
-*Fig 2: Evaluation of the final model after fine-tuning.*
+*Fig 4: Evaluation of the final model after fine-tuning.*
 
 ---
 
