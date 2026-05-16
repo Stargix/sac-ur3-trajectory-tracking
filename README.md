@@ -32,6 +32,9 @@ Below are the training plots from the 300k steps fine-tuning run using the expon
 ![Orientation Details](assets/orientation_details.png)
 *Fig 2: Orientation error analysis during fine-tuning. Note the refinement in orientation error as training progresses.*
 
+![Evaluation Details](assets/evaluation_details.png)
+*Fig 3: Detailed trajectory tracking results for the fine-tuned model.*
+
 ### A Note on the "Best Model"
 As observed across different runs, the automated **`best_model.zip`** usually occurs **before** the introduction of significant sensor noise in the curriculum. Noise naturally degrades the evaluation score, so the framework saves the model at its peak deterministic performance before robustness tests begin.
 
@@ -41,11 +44,11 @@ Here are the visual demonstrations of the models on this branch:
 
 ![Best Model Evaluation](assets/best_model.gif)
 
-*Fig 3: Evaluation of the best model (saved before noise).*
+*Fig 4: Evaluation of the best model (saved before noise).*
 
 ![Final Model Evaluation](assets/final_model.gif)
 
-*Fig 4: Evaluation of the final model after fine-tuning (from step 300,000).*
+*Fig 5: Evaluation of the final model after fine-tuning (from step 300,000).*
 
 While the model does not achieve perfect orientation tracking, it maintains a very acceptable error considering the complexity of the movements required to stay on path. Crucially, we consider this model to be the **smoothest** of all trained variants, showing less jitter and more natural trajectories.
 
@@ -192,6 +195,9 @@ python scripts/workspace_check.py
 ```
 
 This samples 50 000 random joint configurations, plots the resulting workspace cloud against the lemniscate, and reports the maximum distance from any trajectory point to the nearest sampled configuration. Output is saved to `results/workspace_check.png`.
+
+![Workspace Check](assets/workspace_check.png)
+*Fig 6: Workspace check showing the trajectory within the arm's reach.*
 
 ---
 
