@@ -8,6 +8,12 @@ __pycache__/
 checkpoints/
 logs/
 debugs/
+checkpoints_finetune/
+debugs_finetune/
+logs_finetune/
+checkpoints_soft/
+debugs_soft/
+logs_soft/
 
 # Large binary weights — only curated files in weights/ are tracked
 # (best_model.zip and ur3_sac_final.zip are committed intentionally)
