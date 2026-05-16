@@ -176,6 +176,12 @@ Here is a visual demonstration of the policy execution (from step 1.5M):
 ![Evaluation](assets/evaluation.gif)
 *Fig 5: Animated evaluation showing the robot tracking the trajectory at the end of the run.*
 
+### Conclusions and Insights
+
+1. **Decoupled Learning**: The agent naturally prioritizes position tracking (translation) over orientation (rotation) in the early phases. This is expected as position error creates a larger and more consistent gradient than the sharp exponential orientation reward.
+2. **The "POMDP" Challenge with Action Delay**: The catastrophic failure in Phase 6 (Action Delay) confirms that standard MLP policies struggle with delayed rewards and observations. Without history (frame stacking) or memory (LSTM), the agent cannot easily learn to compensate for the lag, leading to oscillations and instability.
+3. **Soft Constraint Behavior**: As seen in Fig 3 (Step 975k), the agent treats orientation as a soft restriction when the geometry becomes too complex or near singularity. This "compromise" behavior is actually a desirable trait in robotics, as it prevents the controller from locking up or failing completely when a strict constraint cannot be met.
+
 ---
 
 ## Reward Function
