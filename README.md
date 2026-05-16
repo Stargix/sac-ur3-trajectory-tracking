@@ -22,6 +22,19 @@ The fine-tuning attempts on this branch **failed to produce the expected improve
 1. **Noise Sensitivity**: The exponential reward is highly sensitive to noise when the scale is small.
 2. **Future Directions**: A more gradual noise curriculum or recurrent policies (like SAC-LSTM) would be required to handle this level of uncertainty while maintaining precision.
 
+### Visualizing the Failure (Plots & GIFs)
+
+Despite the failure to improve orientation, here are the training plots and evaluation from this branch (at 500k steps) to document the behavior:
+
+![Training Progress](assets/training_progress.png)
+*Fig 1: Reward and tracking error during soft fine-tuning. Notice the high variance or lack of improvement due to noise.*
+
+![Orientation Details](assets/orientation_details.png)
+*Fig 2: Orientation error analysis. The agent fails to sharpen the orientation tracking.*
+
+![Failed Evaluation](assets/evaluation.gif)
+*Fig 3: Animated evaluation showing the robot struggling with orientation under high noise.*
+
 ---
 
 ## Repository Structure
