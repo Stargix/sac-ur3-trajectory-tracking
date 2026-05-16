@@ -160,6 +160,8 @@ In this run:
 
 This highlights the importance of visual inspection and metric analysis over automated reward metrics when selecting policies for deployment or fine-tuning.
 
+As a general rule in curriculum learning with noise, the **best model** is almost always saved **before** the introduction of significant sensor noise or delays, as these elements naturally degrade the evaluation score even if the agent is learning to be more robust.
+
 ### Best Model Evaluation (GIF)
 
 Here is a visual demonstration of the automated **`best_model.zip`** execution:
