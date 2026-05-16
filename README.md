@@ -16,6 +16,9 @@ The training pipeline uses a four-phase curriculum that starts with a small, slo
 
 This branch documents the **very first successful training run** of the project, reaching 1,000,000 steps. This run served as the baseline and proof-of-concept for all subsequent experiments (such as adding orientation and noise).
 
+### Noise and Robustness
+This first model was trained **without sensor noise** and **without action delay**. It represents the ideal performance in a clean simulation environment before robustness challenges were introduced in later branches.
+
 ### Key Results
 The model achieved exceptional precision on pure position tracking:
 - **Mean tracking error**: 2.3 mm
