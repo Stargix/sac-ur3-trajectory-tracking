@@ -40,9 +40,11 @@ As observed across different runs, the automated **`best_model.zip`** usually oc
 Here are the visual demonstrations of the models on this branch:
 
 ![Best Model Evaluation](assets/best_model.gif)
+
 *Fig 3: Evaluation of the best model (saved before noise).*
 
 ![Final Model Evaluation](assets/final_model.gif)
+
 *Fig 4: Evaluation of the final model after fine-tuning (from step 300,000).*
 
 While the model does not achieve perfect orientation tracking, it maintains a very acceptable error considering the complexity of the movements required to stay on path. Crucially, we consider this model to be the **smoothest** of all trained variants, showing less jitter and more natural trajectories.
