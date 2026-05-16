@@ -106,6 +106,76 @@ The evaluation environment always runs without noise or delay so that metrics re
 
 ---
 
+## 6-DOF Orientation Tracking (Current Branch)
+
+This branch extends the project to support full 6-DOF control by tracking the target position while maintaining a fixed "tool-down" orientation. The observation space is extended to 35 dimensions to include the current and target quaternions.
+
+### 6-Phase Curriculum
+
+To handle the increased complexity, the training was split into 6 granular phases to isolate variables and prevent position tracking degradation:
+
+| Phase | Description | Steps | Radius | Speed | Noise | Delay | Orient Scale |
+|---|---|---|---|---|---|---|---|
+| 1 | Position Bootstrap | 200 K | 0.04 m | 0.2 | 0 | 0 | 1.0 (off) |
+| 2 | Full Trajectory (Pos Only) | 450 K | 0.08 m | 0.3 | 0 | 0 | 1.0 (off) |
+| 3 | Orientation Discovery | 750 K | 0.08 m | 0.3 | 0 | 0 | 1.0 (wide) |
+| 4 | Orientation Refinement | 1 M | 0.08 m | 0.3 | 0 | 0 | 0.5 |
+| 5 | Speed & Noise | 1.3 M | 0.08 m | 0.4 | 0.0003 | 0 | 0.3 |
+| 6 | Full Difficulty | 1.5 M | 0.08 m | 0.4 | 0.0005 | 1 step | 0.2 |
+
+### Training Results Analysis
+
+Below are the training plots from the 1.5M step run:
+
+![Training Progress](assets/training_progress.png)
+*Fig 1: Reward and tracking error per episode. Note the perfect tracking around episode 600 (Phase 2/3) and the spikes at phase transitions.*
+
+![Orientation Details](assets/orientation_details.png)
+*Fig 2: Orientation error analysis. The agent learns to reduce orientation error but struggles when noise and delay are introduced.*
+
+### Orientation Reachability and Soft Restrictions (Step 975,000)
+
+Here is a visual example from step 975,000:
+
+![Step 975,000 Evaluation](assets/step0975000.gif)
+*Fig 3: Evaluation at step 975,000 showing orientation challenges.*
+
+In this video, we can observe that at certain points of the trajectory, the robot arm reaches joint configurations where it is physically impossible (or near singularity) to maintain a perfectly vertical "tool-down" orientation while staying on the path. 
+
+This geometric limitation, combined with the introduced sensor noise, makes it extremely difficult for the agent to keep the orientation error at exactly 0. Consequently, the orientation constraint acts as a **soft restriction**: the agent prioritizes position tracking and finds the best possible orientation compromise in these difficult regions rather than failing the trajectory.
+
+### Fine-Tuning Strategy
+
+As seen in the plots, the agent mastered position tracking perfectly (episodes 500-700) and was handling orientation until the action delay in Phase 6 broke the performance. 
+
+To achieve perfect orientation, a "soft" fine-tuning script (`train_finetune_soft.py`) was created to load a high-performing checkpoint (e.g., around episode 950 or 1225) and train it without action delay and with a smoothly sharpening reward scale.
+
+### A Note on Selecting the "Best Model"
+
+In reinforcement learning with complex curricula, the automated "best model" saved by the framework (based on the highest total reward) may not always be the most physically capable model for a specific task. 
+
+In this run:
+- The model at **episode 950** and **episode 1225** showed the lowest tracking error before the action delay broke it.
+- The model at **episode 600** was the absolute best for pure position tracking (near zero error).
+
+This highlights the importance of visual inspection and metric analysis over automated reward metrics when selecting policies for deployment or fine-tuning.
+
+### Best Model Evaluation (GIF)
+
+Here is a visual demonstration of the automated **`best_model.zip`** execution:
+
+![Best Model Evaluation](assets/best_model.gif)
+*Fig 4: Animated evaluation of the best model saved by the framework.*
+
+### Evaluation Result (GIF)
+
+Here is a visual demonstration of the policy execution (from step 1.5M):
+
+![Evaluation](assets/evaluation.gif)
+*Fig 5: Animated evaluation showing the robot tracking the trajectory at the end of the run.*
+
+---
+
 ## Reward Function
 
 The reward at each control step is:
