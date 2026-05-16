@@ -133,13 +133,16 @@ Below are the training plots from the 1.5M step run:
 ![Orientation Details](assets/orientation_details.png)
 *Fig 2: Orientation error analysis. The agent learns to reduce orientation error but struggles when noise and delay are introduced.*
 
+![Evaluation Details](assets/evaluation_details.png)
+*Fig 3: Detailed trajectory tracking results at the end of the run (1.5M steps).*
+
 ### Orientation Reachability and Soft Restrictions (Step 975,000)
 
 Here is a visual example from step 975,000:
 
 ![Step 975,000 Evaluation](assets/step0975000.gif)
 
-*Fig 3: Evaluation at step 975,000 showing orientation challenges.*
+*Fig 4: Evaluation at step 975,000 showing orientation challenges.*
 
 In this video, we can observe that at certain points of the trajectory, the robot arm reaches joint configurations where it is physically impossible (or near singularity) to maintain a perfectly vertical "tool-down" orientation while staying on the path. 
 
@@ -169,7 +172,7 @@ Here is a visual demonstration of the automated **`best_model.zip`** execution:
 
 ![Best Model Evaluation](assets/best_model.gif)
 
-*Fig 4: Animated evaluation of the best model saved by the framework.*
+*Fig 5: Animated evaluation of the best model saved by the framework.*
 
 ### Evaluation Result (GIF)
 
@@ -177,7 +180,7 @@ Here is a visual demonstration of the policy execution (from step 1.5M):
 
 ![Evaluation](assets/evaluation.gif)
 
-*Fig 5: Animated evaluation showing the robot tracking the trajectory at the end of the run.*
+*Fig 6: Animated evaluation showing the robot tracking the trajectory at the end of the run.*
 
 ### Conclusions and Insights
 
@@ -234,6 +237,9 @@ python scripts/workspace_check.py
 ```
 
 This samples 50 000 random joint configurations, plots the resulting workspace cloud against the lemniscate, and reports the maximum distance from any trajectory point to the nearest sampled configuration. Output is saved to `results/workspace_check.png`.
+
+![Workspace Check](assets/workspace_check.png)
+*Fig 7: Workspace check showing the trajectory within the arm's reach.*
 
 ---
 
