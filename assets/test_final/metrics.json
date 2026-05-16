@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-05-17T00:37:47.363857",
+  "model": "weights/ur3_sac_final.zip",
+  "n_episodes": 1,
+  "best_episode": {
+    "rmse_mm": 6.699813844537513,
+    "mean_error_mm": 2.876784834143473,
+    "max_error_mm": 52.055093092151694,
+    "pct_under_5mm": 92.10000000000001,
+    "pct_under_10mm": 94.0,
+    "pct_under_20mm": 97.2,
+    "mean_jerk": 0.09608812630176544,
+    "total_reward": 13464.815096768853
+  },
+  "all_episodes": {
+    "mean_rewards": [
+      13464.815096768853
+    ],
+    "mean_errors_mm": [
+      2.876784834143473
+    ]
+  }
+}
