@@ -33,8 +33,11 @@ Here are the training plots and evaluation from this historic run:
 ![Observation Analysis](assets/observation_analysis.png)
 *Fig 2: Analysis of the observations during the run.*
 
+![Evaluation Details](assets/evaluation_details.png)
+*Fig 3: Detailed trajectory tracking results. The agent follows the figure-eight path with millimeter precision.*
+
 ![Evaluation](assets/evaluation.gif)
-*Fig 3: Animated evaluation showing the incredible precision of the first model.*
+*Fig 4: Animated evaluation showing the incredible precision of the first model.*
 
 ---
 
@@ -179,6 +182,9 @@ python scripts/workspace_check.py
 ```
 
 This samples 50 000 random joint configurations, plots the resulting workspace cloud against the lemniscate, and reports the maximum distance from any trajectory point to the nearest sampled configuration. Output is saved to `results/workspace_check.png`.
+
+![Workspace Check](assets/workspace_check.png)
+*Fig 5: Workspace check showing the trajectory within the arm's reach.*
 
 ---
 
