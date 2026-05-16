@@ -138,6 +138,7 @@ Below are the training plots from the 1.5M step run:
 Here is a visual example from step 975,000:
 
 ![Step 975,000 Evaluation](assets/step0975000.gif)
+
 *Fig 3: Evaluation at step 975,000 showing orientation challenges.*
 
 In this video, we can observe that at certain points of the trajectory, the robot arm reaches joint configurations where it is physically impossible (or near singularity) to maintain a perfectly vertical "tool-down" orientation while staying on the path. 
@@ -167,6 +168,7 @@ As a general rule in curriculum learning with noise, the **best model** is almos
 Here is a visual demonstration of the automated **`best_model.zip`** execution:
 
 ![Best Model Evaluation](assets/best_model.gif)
+
 *Fig 4: Animated evaluation of the best model saved by the framework.*
 
 ### Evaluation Result (GIF)
@@ -174,6 +176,7 @@ Here is a visual demonstration of the automated **`best_model.zip`** execution:
 Here is a visual demonstration of the policy execution (from step 1.5M):
 
 ![Evaluation](assets/evaluation.gif)
+
 *Fig 5: Animated evaluation showing the robot tracking the trajectory at the end of the run.*
 
 ### Conclusions and Insights
