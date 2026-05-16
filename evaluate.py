@@ -35,7 +35,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
-from envs.ur3_tracking_env import UR3TrackingEnv
+from envs.ur3_orientation_exp_env import UR3OrientationExpEnv
 from stable_baselines3 import SAC
 
 
@@ -45,11 +45,12 @@ def run(model_path, output_dir, n_episodes):
     os.makedirs(output_dir, exist_ok=True)
 
     model = SAC.load(model_path)
-    env = UR3TrackingEnv(
+    env = UR3OrientationExpEnv(
         obs_noise_std=0.0,
         action_delay=0,
         traj_speed=0.4,
         traj_radius=0.08,
+        orient_weight=1.0,
         render_mode="rgb_array",
     )
 

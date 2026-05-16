@@ -11,6 +11,31 @@ The task requires the 6-DOF arm to keep its end-effector on a continuously movin
 The training pipeline uses a four-phase curriculum that starts with a small, slow trajectory and progressively adds radius, speed, sensor noise, and an action delay to improve robustness and sim-to-real transfer readiness.
 
 ---
+ 
+## Experimental Fine-Tuning (Cosine vs Exponential)
+
+In this branch, we explored different reward formulations to achieve both high-precision position tracking and strict "tool-down" orientation.
+
+### Cosine Reward (Pre-train)
+Initially, we used a **cosine-based reward** for orientation. While this formulation was excellent for position tracking and allowed the agent to discover the trajectory easily, it was not "strict" enough for orientation. The agent followed the path perfectly but the tool was not completely vertical.
+
+### Exponential Reward (Fine-tune)
+To fix the orientation precision, we applied a **fine-tuning** phase using a sharp **exponential reward** for orientation error. This forced the agent to sharpen its orientation control.
+
+### A Note on the "Best Model"
+As observed across different runs, the automated **`best_model.zip`** usually occurs **before** the introduction of significant sensor noise in the curriculum. Noise naturally degrades the evaluation score, so the framework saves the model at its peak deterministic performance before robustness tests begin.
+
+### Evaluation Results (GIFs)
+
+Here are the visual demonstrations of the models on this branch:
+
+![Best Model Evaluation](assets/best_model.gif)
+*Fig 1: Evaluation of the best model (saved before noise).*
+
+![Final Model Evaluation](assets/final_model.gif)
+*Fig 2: Evaluation of the final model after fine-tuning.*
+
+---
 
 ## Repository Structure
 
