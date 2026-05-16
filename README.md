@@ -34,6 +34,7 @@ Here are the training plots and evaluation from this historic run:
 *Fig 2: Analysis of the observations during the run.*
 
 ![Evaluation](assets/evaluation.gif)
+
 *Fig 3: Animated evaluation showing the incredible precision of the first model.*
 
 ---
