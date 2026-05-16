@@ -12,6 +12,18 @@ The training pipeline uses a four-phase curriculum that starts with a small, slo
 
 ---
 
+## Soft Fine-Tuning Analysis (Current Branch)
+
+This branch investigated the fine-tuning of the model from the `orientation-tracking` branch to improve orientation tracking. 
+
+The fine-tuning attempts on this branch **failed to produce the expected improvements due to the high sensor noise** introduced in the environment settings. The combination of a sharp exponential reward for orientation and significant observation noise destabilized the gradients, preventing the agent from settling into a precise orientation lock.
+
+### Takeaways
+1. **Noise Sensitivity**: The exponential reward is highly sensitive to noise when the scale is small.
+2. **Future Directions**: A more gradual noise curriculum or recurrent policies (like SAC-LSTM) would be required to handle this level of uncertainty while maintaining precision.
+
+---
+
 ## Repository Structure
 
 ```
