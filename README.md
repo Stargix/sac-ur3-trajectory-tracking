@@ -22,6 +22,13 @@ Initially, we used a **cosine-based reward** for orientation. While this formula
 ### Exponential Reward (Fine-tune)
 To fix the orientation precision, we applied a **fine-tuning** phase using a sharp **exponential reward** for orientation error. This forced the agent to sharpen its orientation control.
 
+### Noise and Robustness in Fine-Tuning
+Crucially, the fine-tuning on this branch followed a 2-phase curriculum:
+- **Phase 1**: No sensor noise and no action delay.
+- **Phase 2**: Introduced sensor noise (`obs_noise_std: 0.0003`) to improve robustness, but kept `action_delay: 0`.
+
+This means the model is robust to noise but was not trained to handle control delays.
+
 ### Fine-Tuning Results (Plots)
 
 Below are the training plots from the 300k steps fine-tuning run using the exponential reward:
