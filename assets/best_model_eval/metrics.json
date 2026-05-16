@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-05-17T00:02:02.072589",
+  "model": "weights/best_model.zip",
+  "n_episodes": 2,
+  "best_episode": {
+    "rmse_mm": 6.2081812079623875,
+    "mean_error_mm": 3.3151360078463887,
+    "max_error_mm": 50.793041183006466,
+    "pct_under_5mm": 91.8,
+    "pct_under_10mm": 93.30000000000001,
+    "pct_under_20mm": 98.7,
+    "mean_jerk": 0.0509650893509388,
+    "total_reward": 11049.474534000437
+  },
+  "all_episodes": {
+    "mean_rewards": [
+      11049.474534000437,
+      10404.609044352866
+    ],
+    "mean_errors_mm": [
+      3.3151360078463887,
+      3.2516281533708753
+    ]
+  }
+}
