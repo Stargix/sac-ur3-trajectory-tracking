@@ -25,7 +25,9 @@ For this high-precision trajectory tracking task, we selected **Soft Actor-Criti
  
 ## Experimental Fine-Tuning (Cosine vs Exponential)
 
-In this branch, we explored different reward formulations to achieve both high-precision position tracking and strict "tool-down" orientation.
+Este proceso de fine-tuning se realizó **después** de entrenar el primer modelo base (rama `first_model` con recompensa coseno) y tras **múltiples pruebas y experimentos** con diferentes hiperparámetros para encontrar la combinación más robusta.
+
+En esta rama, exploramos diferentes formulaciones de recompensa para lograr tanto un seguimiento de posición de alta precisión como una orientación estricta de "herramienta hacia abajo".
 
 ### Cosine Reward (Pre-train)
 Initially, we used a **cosine-based reward** for orientation. While this formulation was excellent for position tracking and allowed the agent to discover the trajectory easily, it was not "strict" enough for orientation. The agent followed the path perfectly but the tool was not completely vertical.
