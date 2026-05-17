@@ -118,12 +118,27 @@ def main():
     )
 
     # Callbacks
+    eval_callback = EvalCallback(
+        eval_env,
+        best_model_save_path=DIR_WEIGHTS,
+        log_path=DIR_LOGS,
+        eval_freq=EVAL_FREQ,
+        n_eval_episodes=5,
+        deterministic=True
+    )
+    
+    debug_callback = DebugCallback(
+        eval_env=eval_env,
+        debug_dir=DIR_DEBUGS,
+        eval_freq=EVAL_FREQ
+    )
+    
     curriculum_callback = PhasedCurriculumCallback(
+        train_env=env,
         eval_env=eval_env,
         phases=PHASES,
-        eval_freq=EVAL_FREQ,
-        log_dir=DIR_LOGS,
         debug_dir=DIR_DEBUGS,
+        check_freq=EVAL_FREQ,
     )
 
     checkpoint_callback = CheckpointCallback(
@@ -132,7 +147,7 @@ def main():
         name_prefix="ur3_sac_random",
     )
 
-    callbacks = [curriculum_callback, checkpoint_callback]
+    callbacks = [eval_callback, debug_callback, curriculum_callback, checkpoint_callback]
 
     # Train
     print(f"Starting fine-tuning on random trajectories for {args.steps} steps...")
@@ -140,6 +155,7 @@ def main():
         total_timesteps=args.steps,
         callback=callbacks,
         reset_num_timesteps=True,  # Reset timesteps for the new run
+        progress_bar=True,
     )
 
     # Save final model
