@@ -12,6 +12,71 @@ The training pipeline uses a four-phase curriculum that starts with a small, slo
 
 ---
 
+## Algorithm Selection: Why Soft Actor-Critic (SAC)?
+
+For this high-precision trajectory tracking task, we selected **Soft Actor-Critic (SAC)** over other popular Reinforcement Learning algorithms (such as PPO or DDPG) for several theoretical and practical reasons:
+
+1. **Continuous Action Space**: The task requires outputting continuous joint position deltas. SAC is specifically designed for continuous action spaces.
+2. **Sample Efficiency**: Being an **off-policy** algorithm, SAC can reuse past experiences from a replay buffer. This is much more sample-efficient than on-policy methods like PPO, which was crucial given the large number of steps needed to learn the trajectory.
+3. **Entropy Maximization**: SAC maximizes both the expected reward and the **entropy** of the policy. This prevents the policy from prematurely converging to bad local minima (e.g., just staying still to avoid negative rewards) and encourages exploration of the full workspace.
+4. **Smooth Control**: The maximum entropy formulation tends to produce smoother control actions than deterministic methods like DDPG, which is vital to avoid high jerk and protect the physical robot's actuators.
+
+---
+ 
+## Experimental Fine-Tuning (Cosine vs Exponential)
+
+Este proceso de fine-tuning se realizó **después** de entrenar el primer modelo base (rama `first_model` con recompensa coseno) y tras **múltiples pruebas y experimentos** con diferentes hiperparámetros para encontrar la combinación más robusta.
+
+En esta rama, exploramos diferentes formulaciones de recompensa para lograr tanto un seguimiento de posición de alta precisión como una orientación estricta de "herramienta hacia abajo".
+
+> [!NOTE]
+> **Nota de Cronología**: Aunque esta rama logró el mejor error de orientación (19.0°) gracias al fine-tune exponencial, cronológicamente la rama `orientation-tracking` es posterior y contiene un entrenamiento más largo de 1.5 millones de pasos (con 21.3° de error de orientación). Esta rama se conserva por tener el control de orientación más estricto.
+
+### Cosine Reward (Pre-train)
+Initially, we used a **cosine-based reward** for orientation. While this formulation was excellent for position tracking and allowed the agent to discover the trajectory easily, it was not "strict" enough for orientation. The agent followed the path perfectly but the tool was not completely vertical.
+
+### Exponential Reward (Fine-tune)
+To fix the orientation precision, we applied a **fine-tuning** phase using a sharp **exponential reward** for orientation error. This forced the agent to sharpen its orientation control.
+
+### Noise and Robustness in Fine-Tuning
+Crucially, the fine-tuning on this branch followed a 2-phase curriculum:
+- **Phase 1**: No sensor noise and no action delay.
+- **Phase 2**: Introduced sensor noise (`obs_noise_std: 0.0003`) to improve robustness, but kept `action_delay: 0`.
+
+This means the model is robust to noise but was not explicitly trained to handle control delays during the fine-tuning phase. Sin embargo, se puede seguir usando el modelo en entornos con pequeños delays; el error empeorará un poco (al no estar entrenado para ello), pero el modelo sigue siendo funcional y capaz de seguir la trayectoria.
+
+### Fine-Tuning Results (Plots)
+
+Below are the training plots from the 300k steps fine-tuning run using the exponential reward:
+
+![Fine-Tuning Progress](assets/training_progress.png)
+*Fig 1: Reward and tracking error during fine-tuning. The agent maintains position tracking while adapting to the sharp orientation reward.*
+
+![Orientation Details](assets/orientation_details.png)
+*Fig 2: Orientation error analysis during fine-tuning. Note the refinement in orientation error as training progresses.*
+
+![Evaluation Details](assets/evaluation_details.png)
+*Fig 3: Detailed trajectory tracking results for the fine-tuned model.*
+
+### A Note on the "Best Model"
+As observed across different runs, the automated **`best_model.zip`** usually occurs **before** the introduction of significant sensor noise in the curriculum. Noise naturally degrades the evaluation score, so the framework saves the model at its peak deterministic performance before robustness tests begin.
+
+### Evaluation Results (GIFs)
+
+Here are the visual demonstrations of the models on this branch:
+
+![Best Model Evaluation](assets/best_model.gif)
+
+*Fig 4: Evaluation of the best model (saved before noise).*
+
+![Final Model Evaluation](assets/final_model.gif)
+
+*Fig 5: Evaluation of the final model after fine-tuning (from step 300,000).*
+
+While the model does not achieve perfect orientation tracking, it maintains a very acceptable error considering the complexity of the movements required to stay on path. Crucially, we consider this model to be the **smoothest** of all trained variants, showing less jitter and more natural trajectories.
+
+---
+
 ## Repository Structure
 
 ```
@@ -153,6 +218,9 @@ python scripts/workspace_check.py
 ```
 
 This samples 50 000 random joint configurations, plots the resulting workspace cloud against the lemniscate, and reports the maximum distance from any trajectory point to the nearest sampled configuration. Output is saved to `results/workspace_check.png`.
+
+![Workspace Check](assets/workspace_check.png)
+*Fig 6: Workspace check showing the trajectory within the arm's reach.*
 
 ---
 

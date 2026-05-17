@@ -1,26 +1,51 @@
 """
-Train a Soft Actor-Critic agent on the UR3 lemniscate tracking task.
+Train a Soft Actor-Critic agent on the UR3 position and orientation
+tracking task.
+
+The agent controls the 6-DOF UR3 arm to keep its end-effector on a
+Bernoulli lemniscate trajectory while simultaneously maintaining a fixed
+tool orientation (the home end-effector pose computed at startup via FK).
+
+Curriculum
+----------
+Training is divided into four phases managed by PhasedCurriculumCallback.
+Each phase advances automatically (early stopping) when its performance
+thresholds are sustained for the required number of consecutive evaluation
+intervals; if the thresholds are never met, the phase ends at its hard
+step limit and training proceeds to the next phase regardless.
+
+Phase 1 — Position bootstrap (target: ≤5 mm mean error, 4 intervals)
+    radius=0.04 m  speed=0.2  noise=0  delay=0  orient_weight=0.0
+    Orientation is in the observation but carries no reward weight yet.
+    The agent replicates the proven position-tracking curriculum without
+    any extra complexity.
+
+Phase 2 — Full trajectory, light orientation (target: ≤3 mm + ≤25°, 3)
+    radius=0.08 m  speed=0.3  noise=0  delay=0  orient_weight=0.2
+    Full-size lemniscate. Orientation reward introduced at 20% weight so
+    the agent learns to begin coordinating wrist joints without losing
+    position accuracy.
+
+Phase 3 — Speed and noise, heavier orientation (target: ≤2 mm + ≤12°, 4)
+    radius=0.08 m  speed=0.4  noise=0.0003  delay=0  orient_weight=0.6
+    Real operating speed. Sensor noise added for sim-to-real robustness.
+    Orientation reward raised to 60% weight.
+
+Phase 4 — Full difficulty (target: ≤2 mm + ≤8°, 5)
+    radius=0.08 m  speed=0.4  noise=0.0005  delay=1  orient_weight=1.0
+    Action delay simulates real hardware latency. Full orientation weight.
+    Training stops when thresholds are sustained, or at --steps steps.
+
+Observation space: 35 dimensions
+    [0:27]   Identical to position-only baseline (normalised)
+    [27:31]  Current EE orientation quaternion [w, x, y, z]
+    [31:35]  Target orientation quaternion     [w, x, y, z]
 
 Usage
 -----
-    # Full 1 M-step training run (default)
-    python train.py
-
-    # Custom step count
-    python train.py --steps 500000
-
-    # Resume from the most recent checkpoint
-    python train.py --resume
-
-    # Disable curriculum (fixed difficulty throughout)
-    python train.py --no-curriculum
-
-Directory layout produced
--------------------------
-    checkpoints/    Periodic model snapshots (every --save-freq steps)
-    weights/        best_model.zip updated whenever eval improves
-    logs/           TensorBoard event files
-    debugs/         Per-interval evaluation snapshots (plots + metrics)
+    python train.py                 # 1.2 M step budget, early stopping active
+    python train.py --steps 800000  # custom step budget
+    python train.py --resume        # resume from latest checkpoint
 """
 
 import argparse
@@ -33,20 +58,91 @@ from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.env_checker import check_env
 
 sys.path.insert(0, os.path.dirname(__file__))
-from envs.ur3_tracking_env import UR3TrackingEnv
-from training.callbacks import CurriculumCallback, DebugCallback
+from envs.ur3_orientation_env import UR3OrientationEnv
+from training.callbacks import DebugCallback
+from training.phased_curriculum import PhasedCurriculumCallback
 
 # ---------------------------------------------------------------------------
-# Defaults
+# Directories
 # ---------------------------------------------------------------------------
-TOTAL_STEPS = 1_000_000
-EVAL_FREQ = 25_000
-SAVE_FREQ = 50_000
-
 DIR_CHECKPOINTS = "checkpoints"
-DIR_WEIGHTS = "weights"
-DIR_LOGS = "logs"
-DIR_DEBUGS = "debugs"
+DIR_WEIGHTS     = "weights"
+DIR_LOGS        = "logs"
+DIR_DEBUGS      = "debugs"
+
+EVAL_FREQ  = 25_000
+SAVE_FREQ  = 50_000
+
+# ---------------------------------------------------------------------------
+# Curriculum phases
+# Designed from empirical data: the position-only model converged to
+# 99% <5mm at step 200K with these env parameters.
+# ---------------------------------------------------------------------------
+PHASES = [
+    {
+        "name": "Phase 1 — position bootstrap",
+        "max_steps": 250_000,       # hard ceiling; early stop at 4 intervals
+        "env_kwargs": {
+            "traj_radius":   0.04,
+            "traj_speed":    0.2,
+            "obs_noise_std": 0.0,
+            "action_delay":  0,
+            "orient_weight": 0.0,
+        },
+        "thresholds": {
+            "eval.mean_dist_mm": (5.0, "below"),
+        },
+        "patience": 4,
+    },
+    {
+        "name": "Phase 2 — full trajectory, orientation introduced",
+        "max_steps": 550_000,
+        "env_kwargs": {
+            "traj_radius":   0.08,
+            "traj_speed":    0.3,
+            "obs_noise_std": 0.0,
+            "action_delay":  0,
+            "orient_weight": 0.2,
+        },
+        "thresholds": {
+            "eval.mean_dist_mm":        (3.0,  "below"),
+            "eval.mean_orient_error_deg": (25.0, "below"),
+        },
+        "patience": 3,
+    },
+    {
+        "name": "Phase 3 — operating speed, noise, heavier orientation",
+        "max_steps": 900_000,
+        "env_kwargs": {
+            "traj_radius":   0.08,
+            "traj_speed":    0.4,
+            "obs_noise_std": 0.0003,
+            "action_delay":  0,
+            "orient_weight": 0.6,
+        },
+        "thresholds": {
+            "eval.mean_dist_mm":        (2.0,  "below"),
+            "eval.mean_orient_error_deg": (12.0, "below"),
+        },
+        "patience": 4,
+    },
+    {
+        "name": "Phase 4 — full difficulty with action delay",
+        "max_steps": None,          # runs until step budget is exhausted
+        "env_kwargs": {
+            "traj_radius":   0.08,
+            "traj_speed":    0.4,
+            "obs_noise_std": 0.0005,
+            "action_delay":  1,
+            "orient_weight": 1.0,
+        },
+        "thresholds": {
+            "eval.mean_dist_mm":        (2.0, "below"),
+            "eval.mean_orient_error_deg": (8.0, "below"),
+        },
+        "patience": 5,
+    },
+]
 
 
 # ---------------------------------------------------------------------------
@@ -64,12 +160,15 @@ def latest_checkpoint(directory):
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="UR3 SAC trajectory tracking — training")
-    p.add_argument("--steps", type=int, default=TOTAL_STEPS)
+    p = argparse.ArgumentParser(
+        description="UR3 position + orientation tracking — SAC training"
+    )
+    p.add_argument("--steps", type=int, default=1_200_000,
+                   help="Total training timesteps (default: 1 200 000)")
     p.add_argument("--eval-freq", type=int, default=EVAL_FREQ)
     p.add_argument("--save-freq", type=int, default=SAVE_FREQ)
-    p.add_argument("--resume", action="store_true")
-    p.add_argument("--no-curriculum", action="store_true")
+    p.add_argument("--resume", action="store_true",
+                   help="Resume from the latest checkpoint")
     return p.parse_args()
 
 
@@ -83,57 +182,44 @@ def main():
     for d in (DIR_CHECKPOINTS, DIR_WEIGHTS, DIR_LOGS, DIR_DEBUGS):
         os.makedirs(d, exist_ok=True)
 
-    # Environments
-    # Training starts at phase-1 difficulty; CurriculumCallback updates it.
-    train_env = UR3TrackingEnv(
-        obs_noise_std=0.0,
-        action_delay=0,
-        traj_radius=0.04,
-        traj_speed=0.2,
+    print("=" * 62)
+    print("  UR3 SAC — Position + Orientation Tracking")
+    print("=" * 62)
+    print(f"  Steps:       {args.steps:,}")
+    print(f"  Obs dims:    35  (27 position + 8 orientation)")
+    print(f"  Eval freq:   {args.eval_freq:,}")
+    print(f"  Phases:      {len(PHASES)} (with per-phase early stopping)")
+    print("=" * 62 + "\n")
+
+    # ---- Environments (Phase 1 settings at startup) ----
+    p1 = PHASES[0]["env_kwargs"]
+
+    train_env = UR3OrientationEnv(
+        obs_noise_std=p1["obs_noise_std"],
+        action_delay=p1["action_delay"],
+        traj_radius=p1["traj_radius"],
+        traj_speed=p1["traj_speed"],
+        orient_weight=p1["orient_weight"],
     )
-    eval_env = UR3TrackingEnv(
+    eval_env = UR3OrientationEnv(
         obs_noise_std=0.0,
         action_delay=0,
-        traj_radius=0.04,
-        traj_speed=0.2,
+        traj_radius=p1["traj_radius"],
+        traj_speed=p1["traj_speed"],
+        orient_weight=p1["orient_weight"],
         render_mode="rgb_array",
     )
 
     check_env(train_env, warn=True)
 
-    # Callbacks
-    callbacks = [
-        CheckpointCallback(
-            save_freq=args.save_freq,
-            save_path=DIR_CHECKPOINTS,
-            name_prefix="ur3_sac",
-        ),
-        EvalCallback(
-            eval_env,
-            best_model_save_path=DIR_WEIGHTS,
-            log_path=DIR_LOGS,
-            eval_freq=args.eval_freq,
-            n_eval_episodes=5,
-            deterministic=True,
-        ),
-        DebugCallback(
-            eval_env=eval_env,
-            debug_dir=DIR_DEBUGS,
-            eval_freq=args.eval_freq,
-        ),
-    ]
-
-    if not args.no_curriculum:
-        callbacks.append(CurriculumCallback(train_env, eval_env))
-
-    # Model
+    # ---- Model ----
     if args.resume:
         ckpt = latest_checkpoint(DIR_CHECKPOINTS)
         if ckpt:
-            print(f"Resuming from {ckpt}")
+            print(f"Resuming from {ckpt}\n")
             model = SAC.load(ckpt, env=train_env)
         else:
-            print("No checkpoint found — starting from scratch.")
+            print("No checkpoint found — starting from scratch.\n")
             args.resume = False
 
     if not args.resume:
@@ -155,9 +241,37 @@ def main():
             tensorboard_log=DIR_LOGS,
         )
 
-    print(f"\nTraining for {args.steps:,} steps — debug snapshots every {args.eval_freq:,} steps\n")
-    t0 = time.time()
+    # ---- Callbacks ----
+    callbacks = [
+        CheckpointCallback(
+            save_freq=args.save_freq,
+            save_path=DIR_CHECKPOINTS,
+            name_prefix="ur3_sac",
+        ),
+        EvalCallback(
+            eval_env,
+            best_model_save_path=DIR_WEIGHTS,
+            log_path=DIR_LOGS,
+            eval_freq=args.eval_freq,
+            n_eval_episodes=5,
+            deterministic=True,
+        ),
+        DebugCallback(
+            eval_env=eval_env,
+            debug_dir=DIR_DEBUGS,
+            eval_freq=args.eval_freq,
+        ),
+        PhasedCurriculumCallback(
+            train_env=train_env,
+            eval_env=eval_env,
+            phases=PHASES,
+            debug_dir=DIR_DEBUGS,
+            check_freq=args.eval_freq,
+        ),
+    ]
 
+    # ---- Train ----
+    t0 = time.time()
     model.learn(
         total_timesteps=args.steps,
         callback=callbacks,
@@ -166,7 +280,13 @@ def main():
 
     elapsed = time.time() - t0
     model.save(os.path.join(DIR_WEIGHTS, "ur3_sac_final"))
-    print(f"\nTraining complete ({elapsed / 3600:.1f} h). Model saved to {DIR_WEIGHTS}/")
+
+    print(f"\n{'=' * 62}")
+    print(f"  Training complete ({elapsed / 3600:.1f} h)")
+    print(f"  Final model: {DIR_WEIGHTS}/ur3_sac_final.zip")
+    print(f"  Best model:  {DIR_WEIGHTS}/best_model.zip")
+    print(f"  Debug plots: {DIR_DEBUGS}/")
+    print("=" * 62)
 
 
 if __name__ == "__main__":
