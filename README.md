@@ -29,6 +29,9 @@ Este proceso de fine-tuning se realizó **después** de entrenar el primer model
 
 En esta rama, exploramos diferentes formulaciones de recompensa para lograr tanto un seguimiento de posición de alta precisión como una orientación estricta de "herramienta hacia abajo".
 
+> [!NOTE]
+> **Nota de Cronología**: Aunque esta rama logró el mejor error de orientación (19.0°) gracias al fine-tune exponencial, cronológicamente la rama `orientation-tracking` es posterior y contiene un entrenamiento más largo de 1.5 millones de pasos (con 21.3° de error de orientación). Esta rama se conserva por tener el control de orientación más estricto.
+
 ### Cosine Reward (Pre-train)
 Initially, we used a **cosine-based reward** for orientation. While this formulation was excellent for position tracking and allowed the agent to discover the trajectory easily, it was not "strict" enough for orientation. The agent followed the path perfectly but the tool was not completely vertical.
 
