@@ -22,6 +22,47 @@ For this high-precision trajectory tracking task, we selected **Soft Actor-Criti
 4. **Smooth Control**: The maximum entropy formulation tends to produce smoother control actions than deterministic methods like DDPG, which is vital to avoid high jerk and protect the physical robot's actuators.
 
 ---
+
+## Challenge Note: State, Action, and Reward Design
+
+This section covers the core design choices of the reinforcement learning agent, fulfilling the requirements for the technical note submission.
+
+### 1. State Space (35 Dimensions)
+To provide the agent with full Markovian state information and trajectory awareness, the observation vector includes:
+*   **Robot State (12D)**: Current joint positions ($q \in \mathbb{R}^6$) and joint velocities ($\dot{q} \in \mathbb{R}^6$).
+*   **End-Effector State (7D)**: Current Cartesian position ($x, y, z$) and orientation represented as a quaternion ($w, x, y, z$).
+*   **Trajectory Target (7D)**: Current target Cartesian position and desired quaternion orientation.
+*   **Lookahead Target (7D)**: Future target position and orientation (at $t + \Delta t$) to allow the agent to anticipate curves.
+*   **Tracking Error (2D)**: Planar distance error in the XY plane.
+
+*Note: All observations are normalized before being fed into the policy networks.*
+
+### 2. Action Space (6 Dimensions)
+The policy outputs a $6\text{D}$ vector $a \in [-1, 1]^6$. 
+*   These normalized values are scaled and treated as **$\Delta$ joint positions**.
+*   The control loop runs at **100 Hz** (MuJoCo step is advanced while maintaining this action until the next control cycle).
+*   Outputting position deltas instead of raw torques naturally encourages smoother motions and is safer for physical deployment.
+
+### 3. Reward Design
+The reward function is a multi-objective scalar designed to balance accuracy, strict orientation, and smoothness:
+$$R = R_{pos} + R_{orient} + R_{smooth}$$
+
+*   **Position Reward ($R_{pos}$)**: Based on the Euclidean distance $d$ between the EE and the target. We use a negative linear reward with a sharp exponential bonus when the agent is within $20\text{ mm}$ of the target to encourage high precision.
+*   **Orientation Reward ($R_{orient}$)**: To enforce a strict "tool-down" constraint, we compute the angle error $\theta$ (in radians) between the current EE Z-axis and the world Z-axis. We apply a sharp exponential penalty: $R_{orient} = \exp(-\theta / \sigma)$, forcing the agent to prioritize keeping the tool vertical.
+*   **Smoothness Penalty ($R_{smooth}$)**: To avoid jitter and protect the actuators, we penalize the L2 norm of the change in actions between consecutive steps (Action Jerk).
+
+### 4. Trajectory Representation
+*   The reference trajectory is a **Bernoulli Lemniscate** (figure-eight) centered in the reachable workspace.
+*   It is represented parametrically as a function of time $t$. 
+*   By feeding the agent both the current target and a future lookahead point, the agent learns to adjust its velocity and joint configurations to handle the high-curvature areas of the eight.
+
+### 5. Tracking Evaluation
+We evaluate the performance using three automated metrics over full episodes:
+1.  **RMSE (Root Mean Square Error)** of the Cartesian distance in millimeters.
+2.  **Success Rate ($<10\text{ mm}$)**: The percentage of the episode time where the tracking error was below $1 \text{ cm}$.
+3.  **Mean Orientation Error**: The average deviation from the vertical axis in degrees.
+
+---
  
 ## Experimental Fine-Tuning (Cosine vs Exponential)
 
@@ -221,6 +262,23 @@ This samples 50 000 random joint configurations, plots the resulting workspace c
 
 ![Workspace Check](assets/workspace_check.png)
 *Fig 6: Workspace check showing the trajectory within the arm's reach.*
+
+---
+
+## How to Run
+
+### 1. Visualize the Best Model
+To see the best model in action (fine-tuned with exponential reward for strict orientation), run the interactive MuJoCo viewer:
+```bash
+python run.py --model weights_finetune/ur3_sac_ft_final.zip
+```
+This fulfills the requirement of "Instructions to run" and allows you to evaluate the tracking performance visually in real time.
+
+### 2. Train the Model (Optional)
+If you wish to reproduce the fine-tuning process:
+```bash
+python train_finetune_orientation.py
+```
 
 ---
 
