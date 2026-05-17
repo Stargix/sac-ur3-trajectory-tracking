@@ -225,6 +225,12 @@ Despite the efforts to ease the transition, the training **did not work and did 
 - **Success rate** ($<10$ mm) was **0%**.
 - **Orientation error** was around **100-150 degrees**.
 
+![Random Training Progress](assets/random_training_progress.png)
+*Fig 7: Training progress on random trajectories showing high error and no improvement.*
+
+![Random Evaluation Details](assets/random_evaluation_details.png)
+*Fig 8: Evaluation details showing the robot failing to track the random spline.*
+
 ### Conclusions
 The failure indicates that the transition from a single fixed trajectory to infinite random trajectories is **too abrupt** for the agent to adapt via fine-tuning. The policy had likely overfitted to the specific geometry, periodic nature, and velocity profile of the lemniscate. 
 
