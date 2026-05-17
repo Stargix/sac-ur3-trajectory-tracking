@@ -42,6 +42,7 @@ class UR3OrientationRandomEnv(UR3OrientationExpEnv):
         self._path_speed = 0.3
         self._path_u = 0.0
         self._path_du = 0.0
+        self._spline_offset = np.zeros(3)
 
         super().__init__(
             xml_path=xml_path,
@@ -71,6 +72,14 @@ class UR3OrientationRandomEnv(UR3OrientationExpEnv):
         tck, _ = splprep([cx, cy, cz], s=0, k=3, per=True)
         self._spline_tck = tck
 
+        # Calculate offset to make the spline pass through traj_center at u=0
+        p0_x, p0_y, p0_z = splev(0.0, tck)
+        self._spline_offset = np.array([
+            self.traj_center[0] - float(p0_x),
+            self.traj_center[1] - float(p0_y),
+            self.traj_center[2] - float(p0_z)
+        ])
+
         u_dense = np.linspace(0, 1, 500)
         pts = np.array(splev(u_dense, tck)).T
         diffs = np.diff(pts, axis=0)
@@ -81,11 +90,13 @@ class UR3OrientationRandomEnv(UR3OrientationExpEnv):
             self.np_random.uniform(self.min_speed, self.max_speed)
         )
         self._path_du = self._path_speed * self.dt / self._spline_length
-        self._path_u = float(self.np_random.uniform(0, 1))
+        self._path_u = 0.0  # Start at u=0 (which is now at traj_center!)
 
     def _random_path(self, u):
         x, y, z = splev(u % 1.0, self._spline_tck)
-        return np.array([float(x), float(y), float(z)])
+        return np.array([float(x) + self._spline_offset[0], 
+                         float(y) + self._spline_offset[1], 
+                         float(z) + self._spline_offset[2]])
 
     def _lemniscate(self, t):
         if self._spline_tck is None:
@@ -106,7 +117,7 @@ class UR3OrientationRandomEnv(UR3OrientationExpEnv):
         return super().step(action)
 
     def set_difficulty(self, workspace_radius=None, min_speed=None,
-                       max_speed=None, **kwargs):
+                       max_speed=None, n_control_points_range=None, **kwargs):
         if workspace_radius is not None:
             self.workspace_radius = workspace_radius
             self.traj_radius = workspace_radius
@@ -114,4 +125,6 @@ class UR3OrientationRandomEnv(UR3OrientationExpEnv):
             self.min_speed = min_speed
         if max_speed is not None:
             self.max_speed = max_speed
+        if n_control_points_range is not None:
+            self.n_cp_min, self.n_cp_max = n_control_points_range
         super().set_difficulty(**kwargs)

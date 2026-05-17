@@ -36,15 +36,16 @@ SAVE_FREQ  = 50_000
 # ---------------------------------------------------------------------------
 PHASES = [
     {
-        "name": "Random FT Phase 1 — Generalization (Medium Speed)",
-        "max_steps": 250_000,
+        "name": "Random FT Phase 1 — Simplification (Slow & Small)",
+        "max_steps": 150_000,
         "env_kwargs": {
-            "workspace_radius": 0.10,
-            "min_speed": 0.2,
-            "max_speed": 0.4,
+            "workspace_radius": 0.06,
+            "min_speed": 0.1,
+            "max_speed": 0.2,
             "obs_noise_std": 0.0003,
             "action_delay": 0,
-            "orient_reward_scale": 0.4,  # Keep the sharp scale from exp branch
+            "orient_reward_scale": 0.4,
+            "n_control_points_range": (3, 5),
         },
         "thresholds": {
             "eval.mean_dist_mm":        (4.0,  "below"),
@@ -53,8 +54,26 @@ PHASES = [
         "patience": 3,
     },
     {
-        "name": "Random FT Phase 2 — Generalization (High Speed)",
-        "max_steps": 250_000,
+        "name": "Random FT Phase 2 — Medium Speed & Full Radius",
+        "max_steps": 300_000,
+        "env_kwargs": {
+            "workspace_radius": 0.10,
+            "min_speed": 0.2,
+            "max_speed": 0.4,
+            "obs_noise_std": 0.0003,
+            "action_delay": 0,
+            "orient_reward_scale": 0.4,
+            "n_control_points_range": (4, 8),
+        },
+        "thresholds": {
+            "eval.mean_dist_mm":        (3.5, "below"),
+            "eval.mean_orient_error_deg": (8.0, "below"),
+        },
+        "patience": 3,
+    },
+    {
+        "name": "Random FT Phase 3 — High Speed",
+        "max_steps": 500_000,
         "env_kwargs": {
             "workspace_radius": 0.10,
             "min_speed": 0.3,
@@ -62,10 +81,11 @@ PHASES = [
             "obs_noise_std": 0.0003,
             "action_delay": 0,
             "orient_reward_scale": 0.4,
+            "n_control_points_range": (4, 8),
         },
         "thresholds": {
             "eval.mean_dist_mm":        (3.0, "below"),
-            "eval.mean_orient_error_deg": (8.0, "below"),
+            "eval.mean_orient_error_deg": (7.0, "below"),
         },
         "patience": 4,
     },
@@ -114,7 +134,7 @@ def main():
         model_path,
         env=env,
         tensorboard_log=DIR_LOGS,
-        learning_rate=5e-5,  # Reduced LR for fine-tuning
+        learning_rate=1.5e-4,  # Increased LR for fine-tuning on random paths
     )
 
     # Callbacks
