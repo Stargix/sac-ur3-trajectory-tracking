@@ -66,12 +66,12 @@ We evaluate the performance using three automated metrics over full episodes:
  
 ## Experimental Fine-Tuning (Cosine vs Exponential)
 
-Este proceso de fine-tuning se realizó **después** de entrenar el primer modelo base (rama `first_model` con recompensa coseno) y tras **múltiples pruebas y experimentos** con diferentes hiperparámetros para encontrar la combinación más robusta.
+This fine-tuning process was performed **after** training the initial base model (branch `first_model` with cosine reward) and after **multiple tests and experiments** with different hyperparameters to find the most robust combination.
 
-En esta rama, exploramos diferentes formulaciones de recompensa para lograr tanto un seguimiento de posición de alta precisión como una orientación estricta de "herramienta hacia abajo".
+In this branch, we explored different reward formulations to achieve both high-precision position tracking and strict "tool-down" orientation.
 
 > [!NOTE]
-> **Nota de Cronología**: Aunque esta rama logró el mejor error de orientación (19.0°) gracias al fine-tune exponencial, cronológicamente la rama `orientation-tracking` es posterior y contiene un entrenamiento más largo de 1.5 millones de pasos (con 21.3° de error de orientación). Esta rama se conserva por tener el control de orientación más estricto.
+> **Chronology Note**: Although this branch achieved the best orientation error (19.0°) thanks to the exponential fine-tune, chronologically the branch `orientation-tracking` is later and contains a longer training of 1.5 million steps (with 21.3° of orientation error). This branch is preserved for having the strictest orientation control.
 
 ### Cosine Reward (Pre-train)
 Initially, we used a **cosine-based reward** for orientation. While this formulation was excellent for position tracking and allowed the agent to discover the trajectory easily, it was not "strict" enough for orientation. The agent followed the path perfectly but the tool was not completely vertical.
@@ -84,7 +84,7 @@ Crucially, the fine-tuning on this branch followed a 2-phase curriculum:
 - **Phase 1**: No sensor noise and no action delay.
 - **Phase 2**: Introduced sensor noise (`obs_noise_std: 0.0003`) to improve robustness, but kept `action_delay: 0`.
 
-This means the model is robust to noise but was not explicitly trained to handle control delays during the fine-tuning phase. Sin embargo, se puede seguir usando el modelo en entornos con pequeños delays; el error empeorará un poco (al no estar entrenado para ello), pero el modelo sigue siendo funcional y capaz de seguir la trayectoria.
+This means the model is robust to noise but was not explicitly trained to handle control delays during the fine-tuning phase. However, the model can still be used in environments with small delays; the error will worsen slightly (as it was not trained for it), but the model remains functional and capable of following the trajectory.
 
 ### Fine-Tuning Results (Plots)
 
