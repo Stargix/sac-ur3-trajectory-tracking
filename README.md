@@ -38,7 +38,7 @@ Crucially, the fine-tuning on this branch followed a 2-phase curriculum:
 - **Phase 1**: No sensor noise and no action delay.
 - **Phase 2**: Introduced sensor noise (`obs_noise_std: 0.0003`) to improve robustness, but kept `action_delay: 0`.
 
-This means the model is robust to noise but was not trained to handle control delays.
+This means the model is robust to noise but was not explicitly trained to handle control delays during the fine-tuning phase. Sin embargo, se puede seguir usando el modelo en entornos con pequeños delays; el error empeorará un poco (al no estar entrenado para ello), pero el modelo sigue siendo funcional y capaz de seguir la trayectoria.
 
 ### Fine-Tuning Results (Plots)
 
