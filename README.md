@@ -12,6 +12,17 @@ The training pipeline uses a four-phase curriculum that starts with a small, slo
 
 ---
 
+## Algorithm Selection: Why Soft Actor-Critic (SAC)?
+
+For this high-precision trajectory tracking task, we selected **Soft Actor-Critic (SAC)** over other popular Reinforcement Learning algorithms (such as PPO or DDPG) for several theoretical and practical reasons:
+
+1. **Continuous Action Space**: The task requires outputting continuous joint position deltas. SAC is specifically designed for continuous action spaces.
+2. **Sample Efficiency**: Being an **off-policy** algorithm, SAC can reuse past experiences from a replay buffer. This is much more sample-efficient than on-policy methods like PPO, which was crucial given the large number of steps needed to learn the trajectory.
+3. **Entropy Maximization**: SAC maximizes both the expected reward and the **entropy** of the policy. This prevents the policy from prematurely converging to bad local minima (e.g., just staying still to avoid negative rewards) and encourages exploration of the full workspace.
+4. **Smooth Control**: The maximum entropy formulation tends to produce smoother control actions than deterministic methods like DDPG, which is vital to avoid high jerk and protect the physical robot's actuators.
+
+---
+
 ## Repository Structure
 
 ```
